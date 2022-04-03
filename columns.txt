@@ -1,5 +1,6 @@
 MuseumURL
 ObjectURL
+ImageURL
 Muuseumikogu
 Number
 Autor
@@ -12,4 +13,3 @@ Seisund
 Tehnika
 Materjal
 Mõõdud
-ImageURL
