@@ -1,0 +1,15 @@
+MuseumURL
+ObjectURL
+Muuseumikogu
+Number
+Autor
+Nimetus
+Hinnang museaali kultuuriväärtuse kohta
+Olemus
+Originaal
+Dateering
+Seisund
+Tehnika
+Materjal
+Mõõdud
+ImageURL
