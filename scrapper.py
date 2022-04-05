@@ -63,6 +63,5 @@ object_info[2] = get_thumbnail_url(object_page)
 print(object_info)
 
 
-# chercher thumbnail url
 # cas spécial pour dimensions
-# cas pour plusieurs dimensions, plusieurs images, eetc (object composé de plusieurs éléments)
+# cas pour plusieurs dimensions, (object composé de plusieurs éléments) --> Pas de distinction matériel, dimension, etc ?
