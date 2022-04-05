@@ -10,6 +10,7 @@ Olemus
 Originaal
 Dateering
 Seisund
+Eritingimused
 Tehnika
 Materjal
 Mõõdud
