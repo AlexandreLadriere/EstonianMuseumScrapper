@@ -1,5 +1,6 @@
 import requests
 from bs4 import BeautifulSoup
+import re
 import csv
 
 from requests_cache import ALL_METHODS
@@ -8,9 +9,9 @@ SPECIAL_CHAR = ['\n', '\t']
 CHAR_TO_REMOVE = ['\"', '/>']
 COLUMNS_FILE = 'columns.txt'
 MUSEUM_ID_FILE = 'museum_id.txt'
-#MUSEUM_URL = 'http://www.muis.ee/rdf/objects-by-museum/83529'
+# MUSEUM_URL = 'http://www.muis.ee/rdf/objects-by-museum/83529'
 MUSEUM_BASE_URL = 'http://www.muis.ee/rdf/objects-by-museum/'
-OBJECT_URL = 'http://opendata.muis.ee/object/1858783'
+# OBJECT_URL = 'http://opendata.muis.ee/object/1858783'
 PERSON_GROUP_BASE_URL = 'http://opendata.muis.ee/person-group/'
 CSV_RESULTS_FILE = 'EstonianMuseumCollections.csv'
 
@@ -55,25 +56,32 @@ def get_object_data_dict(table_list, default_keys):
         object_dict = update_object_dict(object_dict, all_th_text, all_td_text)
     return object_dict
 
-def get_objects_url(museums_url):
-    return
+def get_objects_url(museum_url):
+    pattern = 'resource="(.*)"/>'
+    museum_page = requests.get(museum_url)
+    object_url_list = re.findall(pattern, museum_page.text)
+    return object_url_list
 
-def scrap_objects(object_url_list, object_infos):
+def scrap_objects(object_url_list, object_infos_name):
     objects_info_list = []
     for object_url in object_url_list:
         object_page = requests.get(object_url)
         object_soup = BeautifulSoup(object_page.content, "html.parser")
+        # object general data
         table_div = object_soup.find('div' , {'id': 'general_museaal'})
         table_data = table_div.find_all('table', attrs={'class': 'data'}) # table_data should be a list with 2 elements : <table class="data highlighted"> and <table class="data">
-        object_dict = get_object_data_dict(table_data, object_infos)
-        object_value_list = list(object_dict.values())
+        object_dict = get_object_data_dict(table_data, object_infos_name)
+        # object image info
+        # steps here
         # add steps here for all others values
+        object_value_list = list(object_dict.values())
+        print(object_value_list)
         objects_info_list.append(object_value_list)
     return objects_info_list
 
-object_url_list = [OBJECT_URL]
+museum_id_list = get_columns(MUSEUM_ID_FILE)
 columns = get_columns(COLUMNS_FILE)
-infos = scrap_objects(object_url_list, columns)
-print(infos)
-
-
+for museum_id in museum_id_list:
+    object_url_list = get_objects_url(MUSEUM_BASE_URL + museum_id_list)
+    infos = scrap_objects(object_url_list, columns)
+    print(infos)
