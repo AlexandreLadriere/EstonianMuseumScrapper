@@ -11,6 +11,4 @@ Originaal
 Dateering
 Seisund
 Eritingimused
-Tehnika
-Materjal
-Mõõdud
+Eraldatavad osad
