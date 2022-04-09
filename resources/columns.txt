@@ -2,9 +2,9 @@ MuseumURL
 ObjectURL
 ImageURL
 Muuseumikogu
+Nimetus
 Number
 Autor
-Nimetus
 Hinnang museaali kultuuriväärtuse kohta
 Olemus
 Originaal

@@ -4,14 +4,19 @@ import os
 
 import requests
 from bs4 import BeautifulSoup
+from googletrans import Translator
 
 SPECIAL_CHAR = ['\n', '\t']
+TECHNIC_SUB_DATA = ['Tehnika', 'Värvus', 'Mõõdud']
 RESOURCES_FOLDER = 'resources/'
 COLUMNS_FILE = 'columns.txt'
 MUSEUM_ID_FILE = 'museum_id.txt'
 MUSEUM_BASE_URL = 'http://www.muis.ee/rdf/objects-by-museum/'
 PERSON_GROUP_BASE_URL = 'http://opendata.muis.ee/person-group/'
 CSV_RESULTS_FILE = 'EstonianMuseumCollections.csv'
+SRC_LANG = 'et'
+DEST_LANG = 'fr'
+TRANSLATE = True
 
 # remove specified characters (specified in a list) from the given string
 def remove_character(char_list, str):
@@ -60,6 +65,20 @@ def get_objects_url(museum_url):
     object_url_list = re.findall(pattern, museum_page.text)
     return object_url_list
 
+def translate(text, src, dest):
+    translator = Translator()
+    translation = translator.translate(text, src=src, dest=dest)
+    return translation.text
+
+def translate_object_info(object_info, lg_src, lg_dest):
+    translated_list = object_info
+    for i in range(7, len(object_info)):
+        try:
+                translated_list[i] = translate(object_info[i], src=lg_src, dest=lg_dest)
+        except:
+            continue
+    return translated_list
+
 def scrap_objects(object_url_list, object_infos_name, museum_url):
     objects_info_list = []
     for object_url in object_url_list:
@@ -78,9 +97,13 @@ def scrap_objects(object_url_list, object_infos_name, museum_url):
         else:
             object_image_url = ''
         object_dict['ImageURL'] = object_image_url
+        # format technical info for better translation
+        object_dict['Eraldatavad osad'] = format_technic_info(object_dict['Eraldatavad osad'])
         # transform object dict to list and add it to museum object list
         object_value_list = list(object_dict.values())
-        #print(object_value_list)
+        if TRANSLATE:
+            object_value_list = translate_object_info(object_value_list, SRC_LANG, DEST_LANG)
+        print(object_value_list)
         objects_info_list.append(object_value_list)
     return objects_info_list
 
@@ -91,6 +114,11 @@ def save_to_csv(columns, lines, file):
         for line in lines:
             writer.writerows(line)
 
+def format_technic_info(str):
+    formatted_str = str
+    for sub_str in TECHNIC_SUB_DATA:
+        formatted_str = formatted_str.replace(sub_str, '\n' + sub_str)
+    return formatted_str
 
 if __name__ == '__main__':
     cwd = os.getcwd()
@@ -99,6 +127,6 @@ if __name__ == '__main__':
     infos_list = []
     for museum_id in museum_id_list:
         object_url_list = get_objects_url(MUSEUM_BASE_URL + museum_id)
-        infos = scrap_objects(object_url_list[0:10], columns, MUSEUM_BASE_URL + museum_id)
+        infos = scrap_objects(object_url_list, columns, MUSEUM_BASE_URL + museum_id)
         infos_list.append(infos)
     save_to_csv(columns, infos_list, RESOURCES_FOLDER + CSV_RESULTS_FILE)
