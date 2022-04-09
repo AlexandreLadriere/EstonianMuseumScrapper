@@ -70,6 +70,16 @@ def translate(text, src, dest):
     translation = translator.translate(text, src=src, dest=dest)
     return translation.text
 
+def translate_list(input_list, lg_src, lg_dest):
+    translated_list = []
+    for info in input_list:
+        try:
+                translated_list.append(translate(info, src=lg_src, dest=lg_dest))
+        except:
+            translated_list.append(info)
+            continue
+    return translated_list
+
 def translate_object_info(object_info, lg_src, lg_dest):
     translated_list = object_info
     for i in range(7, len(object_info)):
@@ -110,6 +120,8 @@ def scrap_objects(object_url_list, object_infos_name, museum_url):
 def save_to_csv(columns, lines, file):
     with open(file, 'w', newline="") as f:
         writer = csv.writer(f)
+        if TRANSLATE:
+            columns = translate_list(columns, lg_src=SRC_LANG, lg_dest=DEST_LANG)
         writer.writerow(columns)
         for line in lines:
             writer.writerows(line)
@@ -117,7 +129,10 @@ def save_to_csv(columns, lines, file):
 def format_technic_info(str):
     formatted_str = str
     for sub_str in TECHNIC_SUB_DATA:
-        formatted_str = formatted_str.replace(sub_str, '\n' + sub_str)
+        try:
+            formatted_str = formatted_str.replace(sub_str, '\n' + sub_str)
+        except:
+            continue
     return formatted_str
 
 if __name__ == '__main__':
