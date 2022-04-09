@@ -1,12 +1,12 @@
+import csv
+import re
+import os
+
 import requests
 from bs4 import BeautifulSoup
-import re
-import csv
-
-from requests_cache import ALL_METHODS
 
 SPECIAL_CHAR = ['\n', '\t']
-CHAR_TO_REMOVE = ['\"', '/>']
+RESOURCES_FOLDER = 'resources/'
 COLUMNS_FILE = 'columns.txt'
 MUSEUM_ID_FILE = 'museum_id.txt'
 MUSEUM_BASE_URL = 'http://www.muis.ee/rdf/objects-by-museum/'
@@ -42,9 +42,6 @@ def get_items_text(items_list):
         except:
             continue
     return items_text
-
-def get_object_image_url():
-    return
 
 def get_object_data_dict(table_list, default_keys):
     object_dict = dict.fromkeys(default_keys) # init object dict
@@ -83,16 +80,25 @@ def scrap_objects(object_url_list, object_infos_name, museum_url):
         object_dict['ImageURL'] = object_image_url
         # transform object dict to list and add it to museum object list
         object_value_list = list(object_dict.values())
-        print(object_value_list)
+        #print(object_value_list)
         objects_info_list.append(object_value_list)
     return objects_info_list
 
+def save_to_csv(columns, lines, file):
+    with open(file, 'w', newline="") as f:
+        writer = csv.writer(f)
+        writer.writerow(columns)
+        for line in lines:
+            writer.writerows(line)
 
 
-museum_id_list = get_columns(MUSEUM_ID_FILE)
-columns = get_columns(COLUMNS_FILE)
-for museum_id in museum_id_list:
-    object_url_list = get_objects_url(MUSEUM_BASE_URL + museum_id)
-    infos = scrap_objects(object_url_list, columns, MUSEUM_BASE_URL + museum_id)
-
-    #print(infos)
+if __name__ == '__main__':
+    cwd = os.getcwd()
+    museum_id_list = get_columns(RESOURCES_FOLDER + MUSEUM_ID_FILE)
+    columns = get_columns(RESOURCES_FOLDER + COLUMNS_FILE)
+    infos_list = []
+    for museum_id in museum_id_list:
+        object_url_list = get_objects_url(MUSEUM_BASE_URL + museum_id)
+        infos = scrap_objects(object_url_list[0:10], columns, MUSEUM_BASE_URL + museum_id)
+        infos_list.append(infos)
+    save_to_csv(columns, infos_list, RESOURCES_FOLDER + CSV_RESULTS_FILE)
