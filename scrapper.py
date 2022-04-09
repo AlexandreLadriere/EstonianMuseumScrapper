@@ -82,6 +82,6 @@ def scrap_objects(object_url_list, object_infos_name):
 museum_id_list = get_columns(MUSEUM_ID_FILE)
 columns = get_columns(COLUMNS_FILE)
 for museum_id in museum_id_list:
-    object_url_list = get_objects_url(MUSEUM_BASE_URL + museum_id_list)
+    object_url_list = get_objects_url(MUSEUM_BASE_URL + museum_id)
     infos = scrap_objects(object_url_list, columns)
     print(infos)
