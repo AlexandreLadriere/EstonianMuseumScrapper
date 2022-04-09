@@ -9,9 +9,7 @@ SPECIAL_CHAR = ['\n', '\t']
 CHAR_TO_REMOVE = ['\"', '/>']
 COLUMNS_FILE = 'columns.txt'
 MUSEUM_ID_FILE = 'museum_id.txt'
-# MUSEUM_URL = 'http://www.muis.ee/rdf/objects-by-museum/83529'
 MUSEUM_BASE_URL = 'http://www.muis.ee/rdf/objects-by-museum/'
-# OBJECT_URL = 'http://opendata.muis.ee/object/1858783'
 PERSON_GROUP_BASE_URL = 'http://opendata.muis.ee/person-group/'
 CSV_RESULTS_FILE = 'EstonianMuseumCollections.csv'
 
@@ -45,6 +43,9 @@ def get_items_text(items_list):
             continue
     return items_text
 
+def get_object_image_url():
+    return
+
 def get_object_data_dict(table_list, default_keys):
     object_dict = dict.fromkeys(default_keys) # init object dict
     for table in table_list:
@@ -73,13 +74,20 @@ def scrap_objects(object_url_list, object_infos_name, museum_url):
         object_dict = get_object_data_dict(table_data, object_infos_name)
         object_dict['ObjectURL'] = object_url
         object_dict['MuseumURL'] = museum_url
-        # object image info
-        # steps here
-        # add steps here for all others values
+        # object image url
+        object_image_div = object_soup.find('div' , {'id': 'selected_image'})
+        if object_image_div is not None:
+            object_image_url = object_image_div.a['href']
+        else:
+            object_image_url = ''
+        object_dict['ImageURL'] = object_image_url
+        # transform object dict to list and add it to museum object list
         object_value_list = list(object_dict.values())
         print(object_value_list)
         objects_info_list.append(object_value_list)
     return objects_info_list
+
+
 
 museum_id_list = get_columns(MUSEUM_ID_FILE)
 columns = get_columns(COLUMNS_FILE)
@@ -87,4 +95,4 @@ for museum_id in museum_id_list:
     object_url_list = get_objects_url(MUSEUM_BASE_URL + museum_id)
     infos = scrap_objects(object_url_list, columns, MUSEUM_BASE_URL + museum_id)
 
-    print(infos)
+    #print(infos)
