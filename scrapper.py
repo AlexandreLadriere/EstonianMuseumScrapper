@@ -71,6 +71,7 @@ def scrap_objects(object_url_list, object_infos_name):
         table_div = object_soup.find('div' , {'id': 'general_museaal'})
         table_data = table_div.find_all('table', attrs={'class': 'data'}) # table_data should be a list with 2 elements : <table class="data highlighted"> and <table class="data">
         object_dict = get_object_data_dict(table_data, object_infos_name)
+        object_dict['ObjectURL'] = object_url
         # object image info
         # steps here
         # add steps here for all others values
@@ -84,4 +85,5 @@ columns = get_columns(COLUMNS_FILE)
 for museum_id in museum_id_list:
     object_url_list = get_objects_url(MUSEUM_BASE_URL + museum_id)
     infos = scrap_objects(object_url_list, columns)
+
     print(infos)
