@@ -62,7 +62,7 @@ def get_objects_url(museum_url):
     object_url_list = re.findall(pattern, museum_page.text)
     return object_url_list
 
-def scrap_objects(object_url_list, object_infos_name):
+def scrap_objects(object_url_list, object_infos_name, museum_url):
     objects_info_list = []
     for object_url in object_url_list:
         object_page = requests.get(object_url)
@@ -72,6 +72,7 @@ def scrap_objects(object_url_list, object_infos_name):
         table_data = table_div.find_all('table', attrs={'class': 'data'}) # table_data should be a list with 2 elements : <table class="data highlighted"> and <table class="data">
         object_dict = get_object_data_dict(table_data, object_infos_name)
         object_dict['ObjectURL'] = object_url
+        object_dict['MuseumURL'] = museum_url
         # object image info
         # steps here
         # add steps here for all others values
@@ -84,6 +85,6 @@ museum_id_list = get_columns(MUSEUM_ID_FILE)
 columns = get_columns(COLUMNS_FILE)
 for museum_id in museum_id_list:
     object_url_list = get_objects_url(MUSEUM_BASE_URL + museum_id)
-    infos = scrap_objects(object_url_list, columns)
+    infos = scrap_objects(object_url_list, columns, MUSEUM_BASE_URL + museum_id)
 
     print(infos)
