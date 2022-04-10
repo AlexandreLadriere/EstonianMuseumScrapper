@@ -1,13 +1,15 @@
 import csv
 import re
 import os
+import unicodedata
 
 import requests
 from bs4 import BeautifulSoup
+from tinydb import TinyDB
 from googletrans import Translator
 
 SPECIAL_CHAR = ['\n', '\t']
-TECHNIC_SUB_DATA = ['Tehnika', 'Värvus', 'Mõõdud', 'Materjal']
+TECHNIC_SUB_DATA = ['Tehnika', 'Värvus', 'Mõõdud', 'Materjal', 'Moodud']
 RESOURCES_FOLDER = 'resources/'
 COLUMNS_FILE = 'columns_et.txt'
 MUSEUM_ID_FILE = 'museum_id.txt'
@@ -17,6 +19,8 @@ CSV_RESULTS_FILE = 'EstonianMuseumCollections.csv'
 SRC_LANG = 'et'
 DEST_LANG = 'fr'
 TRANSLATE = False
+REMOVE_ACCENT = True
+DATABASE = RESOURCES_FOLDER + 'db.json'
 
 def remove_character(char_list, str):
     """
@@ -65,7 +69,10 @@ def update_object_dict(object_dict, keys_list, values_list):
     """
     for key in object_dict:
         if key in keys_list:
-            object_dict[key] = values_list[keys_list.index(key)]
+            if REMOVE_ACCENT:
+                object_dict[key] = remove_accent(values_list[keys_list.index(key)])
+            else:
+                object_dict[key] = values_list[keys_list.index(key)]
     return object_dict
 
 def get_items_text(items_list):
@@ -185,6 +192,7 @@ def translate_object_info(object_info, lg_src, lg_dest):
 def scrap_objects(object_url_list, object_infos_name, museum_url):
     """
     Scrap specific museum object infos, and return a list of lists (one list for each object)
+    It also save each object in a json database (tinydb)
     
     Parameters
     ----------
@@ -195,6 +203,7 @@ def scrap_objects(object_url_list, object_infos_name, museum_url):
     museum_url : str
         URL of the museum
     """
+    db = TinyDB(DATABASE, ensure_ascii=False)
     objects_info_list = []
     for object_url in object_url_list:
         object_page = requests.get(object_url)
@@ -218,6 +227,7 @@ def scrap_objects(object_url_list, object_infos_name, museum_url):
         # format technical info for better translation
         object_dict['Eraldatavad osad'] = format_technic_info(object_dict['Eraldatavad osad'])
         # transform object dict to list and add it to museum object list
+        db.insert(object_dict)
         object_value_list = list(object_dict.values())
         if TRANSLATE:
             object_value_list = translate_object_info(object_value_list, SRC_LANG, DEST_LANG)
@@ -263,6 +273,18 @@ def format_technic_info(str):
             continue
     return formatted_str
 
+def remove_accent(text):
+    """
+    Return a string in which letters with accents where replaced with corresponding letter without accent
+
+    Parameters
+    ----------
+    text : str
+        String to transform
+    """
+    text_normalize = unicodedata.normalize('NFKD', text)
+    return "".join([c for c in text_normalize if not unicodedata.combining(c)])
+    
 if __name__ == '__main__':
     cwd = os.getcwd()
     museum_id_list = get_columns(RESOURCES_FOLDER + MUSEUM_ID_FILE)
@@ -270,6 +292,6 @@ if __name__ == '__main__':
     infos_list = []
     for museum_id in museum_id_list:
         object_url_list = get_objects_url(MUSEUM_BASE_URL + museum_id)
-        infos = scrap_objects(object_url_list[0:10], columns, MUSEUM_BASE_URL + museum_id)
+        infos = scrap_objects(object_url_list, columns, MUSEUM_BASE_URL + museum_id)
         infos_list.append(infos)
     save_to_csv(columns, infos_list, RESOURCES_FOLDER + CSV_RESULTS_FILE)
