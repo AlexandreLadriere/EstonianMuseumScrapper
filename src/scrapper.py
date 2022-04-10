@@ -2,6 +2,8 @@ import csv
 import re
 import os
 import unicodedata
+import time
+import logging
 
 import requests
 from bs4 import BeautifulSoup
@@ -19,8 +21,8 @@ PERSON_GROUP_BASE_URL = 'http://opendata.muis.ee/person-group/'
 COLLECTION_BASE_URL = 'https://www.muis.ee/rdf/collection/'
 CSV_RESULTS_FILE = 'EstonianMuseumCollections.csv'
 SRC_LANG = 'et'
-DEST_LANG = 'fr'
-TRANSLATE = False
+DEST_LANG = 'en'
+TRANSLATE = True
 REMOVE_ACCENT = True
 DATABASE = RESOURCES_FOLDER + 'db.json'
 CULTURAL_VALUE_ASSESMENT_ET = 'Hinnang museaali kultuurivaartuse kohta' # must not have accent (replace 'ä' by 'a' for example)
@@ -83,7 +85,10 @@ def update_object_dict(object_dict, keys_list, values_list):
     """
     for key in object_dict:
         if key in keys_list:
-            object_dict[key] = values_list[keys_list.index(key)]
+            if TRANSLATE:
+                object_dict[key] = translate(values_list[keys_list.index(key)], SRC_LANG, DEST_LANG)
+            else:
+                object_dict[key] = values_list[keys_list.index(key)]
     return object_dict
 
 def get_items_text(items_list):
@@ -156,9 +161,14 @@ def translate(text, src, dest):
     values_list : list of str
         Code of destination language, eg: 'de'
     """
-    translator = Translator()
-    translation = translator.translate(text, src=src, dest=dest)
-    return translation.text
+    translated_text = text
+    try:
+        translator = Translator()
+        translation = translator.translate(text, src=src, dest=dest)
+        translated_text = translation.text
+    except:
+        pass
+    return translated_text
 
 def translate_list(input_list, lg_src, lg_dest):
     """
@@ -252,9 +262,8 @@ def scrap_objects(object_url_list, object_infos_name, url):
         db.insert(object_dict_for_db)
         # transform object dict to list and add it to museum object list
         object_value_list = list(object_dict.values())
-        if TRANSLATE:
-            object_value_list = translate_object_info(object_value_list, SRC_LANG, DEST_LANG)
-        print(object_value_list)
+        # if TRANSLATE:
+        #     object_value_list = translate_object_info(object_value_list, SRC_LANG, DEST_LANG)
         objects_info_list.append(object_value_list)
     return objects_info_list
 
@@ -312,18 +321,57 @@ def remove_accent(text):
     
 if __name__ == '__main__':
     cwd = os.getcwd()
+    logging.basicConfig(filename= RESOURCES_FOLDER + 'app.log', filemode='w', format='%(name)s - %(levelname)s - %(message)s', level=logging.DEBUG, encoding='utf-8')
     id_list = []
     base_url = ''
+    
+    ### DEBUG - start
+    time_get_objects_url_start = time.time()
+    logging.info('Start collecting objects URLs: ' + str(time_get_objects_url_start))
+    ### DEBUG - end
+
     if GET_COLLECTION:
         id_list = get_columns(RESOURCES_FOLDER + COLLECTION_ID_FILE)
         base_url = COLLECTION_BASE_URL
     else:
         id_list = get_columns(RESOURCES_FOLDER + MUSEUM_ID_FILE)
         base_url = MUSEUM_BASE_URL
+
+    ### DEBUG - start
+    time_get_objects_url_end = time.time()
+    logging.info('End collecting objects URLs: ' + str(time_get_objects_url_end))
+    logging.info('Total time collecting objects URLs: ' + str(round(time_get_objects_url_end - time_get_objects_url_start, 2)))
+    ### DEBUG - end
+
     columns = get_columns(RESOURCES_FOLDER + COLUMNS_FILE)
     infos_list = []
+
+    ### DEBUG - start
+    time_get_objects_infos_start = time.time()
+    logging.info('Start collecting objects infos: ' + str(time_get_objects_infos_start))
+    ### DEBUG - end
+
     for id in id_list:
         object_url_list = get_objects_url(base_url + id)
         infos = scrap_objects(object_url_list, columns, base_url + id)
         infos_list.append(infos)
+
+    ### DEBUG - start
+    time_get_objects_infos_end = time.time()
+    logging.info('End collecting objects infos: ' + str(time_get_objects_infos_end))
+    logging.info('Total time collecting objects infos: ' + str(round(time_get_objects_infos_end - time_get_objects_infos_start, 2)))
+    ### DEBUG - end
+
+    ### DEBUG - start
+    time_save_csv_start = time.time()
+    logging.info('Start saving infos in csv: ' + str(time_save_csv_start))
+    ### DEBUG - end
+
     save_to_csv(columns, infos_list, RESOURCES_FOLDER + CSV_RESULTS_FILE)
+
+    ### DEBUG - start
+    time_save_csv_end = time.time()
+    logging.info('End saving infos in csv: ' + str(time_save_csv_end))
+    logging.info('Total time saving csv: ' + str(round(time_save_csv_end - time_save_csv_start, 2)))
+    ### DEBUG - end
+
