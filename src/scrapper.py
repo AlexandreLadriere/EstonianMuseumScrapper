@@ -13,19 +13,25 @@ TECHNIC_SUB_DATA = ['Tehnika', 'Värvus', 'Mõõdud', 'Materjal', 'Moodud']
 RESOURCES_FOLDER = 'resources/'
 COLUMNS_FILE = 'columns_et.txt'
 MUSEUM_ID_FILE = 'museum_id.txt'
+COLLECTION_ID_FILE = 'collection_id.txt'
 MUSEUM_BASE_URL = 'http://www.muis.ee/rdf/objects-by-museum/'
 PERSON_GROUP_BASE_URL = 'http://opendata.muis.ee/person-group/'
+COLLECTION_BASE_URL = 'https://www.muis.ee/rdf/collection/'
 CSV_RESULTS_FILE = 'EstonianMuseumCollections.csv'
 SRC_LANG = 'et'
 DEST_LANG = 'fr'
 TRANSLATE = False
 REMOVE_ACCENT = True
 DATABASE = RESOURCES_FOLDER + 'db.json'
-COLLECTION = 'Graafilise disaini kogu'
 CULTURAL_VALUE_ASSESMENT_ET = 'Hinnang museaali kultuurivaartuse kohta' # must not have accent (replace 'ä' by 'a' for example)
 CULTURAL_VALUE_ASSESMENT_EN = 'cultural_value_assesment' # must not have accent (replace 'ä' by 'a' for example)
 TECHNICAL_INFO_ET = 'Eraldatavad osad'
 TECHNICAL_INFO_EN = 'details'
+RDF_URL_COL_NAME = 'RdfURL'
+IMAGE_URL_COL_NAME = 'ImageURL'
+OBJECT_URL_COL_NAME = 'ObjectURL'
+
+GET_COLLECTION = True # if False, then get entire museum collection based on museum id list
 
 def remove_character(char_list, str):
     """
@@ -123,18 +129,18 @@ def get_object_data_dict(table_list, default_keys):
         object_dict = update_object_dict(object_dict, all_th_text, all_td_text)
     return object_dict
 
-def get_objects_url(museum_url):
+def get_objects_url(url):
     """
-    Return a list of url (str) from a rdf museum database list
+    Return a list of url (str) from a rdf database list
     
     Parameters
     ----------
-    museum_url : str
-        URL of a museum database (rdf)
+    url : str
+        URL of a database (rdf)
     """
     pattern = 'resource="(.*)"/>'
-    museum_page = requests.get(museum_url)
-    object_url_list = re.findall(pattern, museum_page.text)
+    page = requests.get(url)
+    object_url_list = re.findall(pattern, page.text)
     return object_url_list
 
 def translate(text, src, dest):
@@ -197,7 +203,7 @@ def translate_object_info(object_info, lg_src, lg_dest):
             continue
     return translated_list
 
-def scrap_objects(object_url_list, object_infos_name, museum_url):
+def scrap_objects(object_url_list, object_infos_name, url):
     """
     Scrap specific museum object infos, and return a list of lists (one list for each object)
     It also save each object in a json database (tinydb)
@@ -208,8 +214,8 @@ def scrap_objects(object_url_list, object_infos_name, museum_url):
         List of objects url
     object_infos_name : list (str)
         List of info names to look for
-    museum_url : str
-        URL of the museum
+    url : str
+        URL of the rdf db
     """
     db = TinyDB(DATABASE)
     objects_info_list = []
@@ -223,19 +229,18 @@ def scrap_objects(object_url_list, object_infos_name, museum_url):
         except: 
             table_data = []
         object_dict = get_object_data_dict(table_data, object_infos_name)
-        object_dict['ObjectURL'] = object_url
-        object_dict['MuseumURL'] = museum_url
+        object_dict[OBJECT_URL_COL_NAME] = object_url
+        object_dict[RDF_URL_COL_NAME] = url
         # object image url
         object_image_div = object_soup.find('div' , {'id': 'selected_image'})
         if object_image_div is not None:
             object_image_url = object_image_div.a['href']
         else:
             object_image_url = ''
-        object_dict['ImageURL'] = object_image_url
+        object_dict[IMAGE_URL_COL_NAME] = object_image_url
         # format technical info for better translation
         object_dict[TECHNICAL_INFO_ET] = format_technic_info(object_dict[TECHNICAL_INFO_ET])
         # rename dict keys by creating new_dict (better to have names without space in db columns titles)
-        print(object_dict)
         object_dict_for_db = {}
         for k,v in object_dict.items():
             if k == TECHNICAL_INFO_ET:
@@ -307,11 +312,18 @@ def remove_accent(text):
     
 if __name__ == '__main__':
     cwd = os.getcwd()
-    museum_id_list = get_columns(RESOURCES_FOLDER + MUSEUM_ID_FILE)
+    id_list = []
+    base_url = ''
+    if GET_COLLECTION:
+        id_list = get_columns(RESOURCES_FOLDER + COLLECTION_ID_FILE)
+        base_url = COLLECTION_BASE_URL
+    else:
+        id_list = get_columns(RESOURCES_FOLDER + MUSEUM_ID_FILE)
+        base_url = MUSEUM_BASE_URL
     columns = get_columns(RESOURCES_FOLDER + COLUMNS_FILE)
     infos_list = []
-    for museum_id in museum_id_list:
-        object_url_list = get_objects_url(MUSEUM_BASE_URL + museum_id)
-        infos = scrap_objects(object_url_list[0:5], columns, MUSEUM_BASE_URL + museum_id)
+    for id in id_list:
+        object_url_list = get_objects_url(base_url + id)
+        infos = scrap_objects(object_url_list, columns, base_url + id)
         infos_list.append(infos)
     save_to_csv(columns, infos_list, RESOURCES_FOLDER + CSV_RESULTS_FILE)

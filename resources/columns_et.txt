@@ -1,4 +1,4 @@
-MuseumURL
+RdfURL
 ObjectURL
 ImageURL
 Muuseumikogu
