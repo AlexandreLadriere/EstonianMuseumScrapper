@@ -21,6 +21,11 @@ DEST_LANG = 'fr'
 TRANSLATE = False
 REMOVE_ACCENT = True
 DATABASE = RESOURCES_FOLDER + 'db.json'
+COLLECTION = 'Graafilise disaini kogu'
+CULTURAL_VALUE_ASSESMENT_ET = 'Hinnang museaali kultuurivaartuse kohta' # must not have accent (replace 'ä' by 'a' for example)
+CULTURAL_VALUE_ASSESMENT_EN = 'cultural_value_assesment' # must not have accent (replace 'ä' by 'a' for example)
+TECHNICAL_INFO_ET = 'Eraldatavad osad'
+TECHNICAL_INFO_EN = 'details'
 
 def remove_character(char_list, str):
     """
@@ -47,11 +52,14 @@ def get_columns(file):
     file : str
         Path of the file we want to retrieve rows from
     """
-    file = open(file, 'r')
+    file = open(file, 'r', encoding='utf-8')
     lines = file.readlines()
     columns = []
     for line in lines:
-        columns.append(remove_character(SPECIAL_CHAR, line))
+        if REMOVE_ACCENT:
+            columns.append(remove_accent(remove_character(SPECIAL_CHAR, line)))
+        else:
+            columns.append(remove_character(SPECIAL_CHAR, line))
     return columns
 
 def update_object_dict(object_dict, keys_list, values_list):
@@ -69,10 +77,7 @@ def update_object_dict(object_dict, keys_list, values_list):
     """
     for key in object_dict:
         if key in keys_list:
-            if REMOVE_ACCENT:
-                object_dict[key] = remove_accent(values_list[keys_list.index(key)])
-            else:
-                object_dict[key] = values_list[keys_list.index(key)]
+            object_dict[key] = values_list[keys_list.index(key)]
     return object_dict
 
 def get_items_text(items_list):
@@ -87,7 +92,10 @@ def get_items_text(items_list):
     items_text = []
     for item in items_list:
         try:
-            items_text.append(item.get_text())
+            if REMOVE_ACCENT:
+                items_text.append(remove_accent(item.get_text()))
+            else:
+                items_text.append(item.get_text())
         except:
             continue
     return items_text
@@ -203,7 +211,7 @@ def scrap_objects(object_url_list, object_infos_name, museum_url):
     museum_url : str
         URL of the museum
     """
-    db = TinyDB(DATABASE, ensure_ascii=False)
+    db = TinyDB(DATABASE)
     objects_info_list = []
     for object_url in object_url_list:
         object_page = requests.get(object_url)
@@ -225,9 +233,19 @@ def scrap_objects(object_url_list, object_infos_name, museum_url):
             object_image_url = ''
         object_dict['ImageURL'] = object_image_url
         # format technical info for better translation
-        object_dict['Eraldatavad osad'] = format_technic_info(object_dict['Eraldatavad osad'])
+        object_dict[TECHNICAL_INFO_ET] = format_technic_info(object_dict[TECHNICAL_INFO_ET])
+        # rename dict keys by creating new_dict (better to have names without space in db columns titles)
+        print(object_dict)
+        object_dict_for_db = {}
+        for k,v in object_dict.items():
+            if k == TECHNICAL_INFO_ET:
+                object_dict_for_db[TECHNICAL_INFO_EN] = v
+            elif k == CULTURAL_VALUE_ASSESMENT_ET:
+                object_dict_for_db[CULTURAL_VALUE_ASSESMENT_EN] = v
+            else:
+                object_dict_for_db[k] = v
+        db.insert(object_dict_for_db)
         # transform object dict to list and add it to museum object list
-        db.insert(object_dict)
         object_value_list = list(object_dict.values())
         if TRANSLATE:
             object_value_list = translate_object_info(object_value_list, SRC_LANG, DEST_LANG)
@@ -282,8 +300,10 @@ def remove_accent(text):
     text : str
         String to transform
     """
-    text_normalize = unicodedata.normalize('NFKD', text)
-    return "".join([c for c in text_normalize if not unicodedata.combining(c)])
+    text = unicodedata.normalize('NFKD', text)
+    text_normalized = "".join([c for c in text if not unicodedata.combining(c)])
+    text_normalized = text_normalized.replace("ä", "a")
+    return text_normalized
     
 if __name__ == '__main__':
     cwd = os.getcwd()
@@ -292,6 +312,6 @@ if __name__ == '__main__':
     infos_list = []
     for museum_id in museum_id_list:
         object_url_list = get_objects_url(MUSEUM_BASE_URL + museum_id)
-        infos = scrap_objects(object_url_list, columns, MUSEUM_BASE_URL + museum_id)
+        infos = scrap_objects(object_url_list[0:5], columns, MUSEUM_BASE_URL + museum_id)
         infos_list.append(infos)
     save_to_csv(columns, infos_list, RESOURCES_FOLDER + CSV_RESULTS_FILE)
