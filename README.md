@@ -1,5 +1,5 @@
 # EstonianMuseumScrapper
-[![GitHub license](https://img.shields.io/github/license/AlexandreLadriere/EstonianMuseumScrapper.svg)](https://github.com/AlexandreLadriere/EstonianMuseumScrapper/blob/master/LICENSE)
+[![GitHub license](https://img.shields.io/github/license/AlexandreLadriere/EstonianMuseumScrapper.svg)](https://github.com/AlexandreLadriere/EstonianMuseumScrapper/blob/main/LICENSE)
 
 This project aimed at retrieving open source data from Estonian museum collections, in order to put them in a spreadsheet format, and then make analyses on these data.
 This project does not handle the data analysis part.
